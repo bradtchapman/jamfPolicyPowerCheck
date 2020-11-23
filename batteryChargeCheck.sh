@@ -10,6 +10,11 @@
 # To create your own base64 string, run "base64 -i /path/to/file.png -o /path/to/base64.txt"
 # Copy and insert the text into your script.
 #
+# Update to check for Big Sur as Big Sur system_profiler reports battery charge as a % 
+# and not as absolute charge value
+# Updated by Rob Blount
+
+# set -x
 
 writeBatteryIcon()
 {
@@ -43,13 +48,21 @@ runJamfHelper()
 checkCharge()
 {
 /usr/sbin/system_profiler SPPowerDataType > $batteryInfo
-hasBattery=$(cat $batteryInfo | grep "Battery Installed" | awk '{ print $3 '} )
 acPowerConnected=$(cat $batteryInfo | grep "Connected" | head -1 | awk '{ print $2 }' )
-chgRem=$(cat $batteryInfo | grep "mAh" | grep Remain | awk '{ print $4 }')
 chgFull=$(cat $batteryInfo | grep "mAh" | grep Capacity | awk '{ print $5 }')
-chgPct=$(echo "( ( $chgRem / $chgFull ) * 100 )" | bc -l )
-chgGood=$(echo "$chgPct > $minChargeLevel" | bc -l )
+chgPct=$()
 
+if [[ $majorOSVers -eq 11 ]]; then
+	hasBattery=$(cat $batteryInfo | grep "Device Name" > /dev/null && echo "Yes" )
+	chgPct=$(cat $batteryInfo | grep "%" | awk -F": " '{print $2}')
+else
+	hasBattery=$(cat $batteryInfo | grep "Battery Installed" | awk '{ print $3 '} )
+	chgRem=$(cat $batteryInfo | grep "mAh" | grep Remain | awk '{ print $4 }')
+	chgPct=$(echo "( ( $chgRem / $chgFull ) * 100 )" | bc -l )
+
+fi 
+
+chgGood=$(echo "$chgPct > $minChargeLevel" | bc -l )
 [[ -z $hasBattery ]] && powerOK="Yes"
 
 #
@@ -83,7 +96,7 @@ echo "------"
 #
 # Power and charge detection logic
 #
-
+majorOSVers=$( sw_vers -productVersion | awk -F"." '{print $1}' )
 checkCharge
 [[ $powerOK == "No" ]] && runJamfHelper
 
