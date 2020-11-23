@@ -48,14 +48,15 @@ runJamfHelper()
 checkCharge()
 {
 /usr/sbin/system_profiler SPPowerDataType > $batteryInfo
-hasBattery=$(cat $batteryInfo | grep "Device Name" > /dev/null && echo "Yes" )
 acPowerConnected=$(cat $batteryInfo | grep "Connected" | head -1 | awk '{ print $2 }' )
 chgFull=$(cat $batteryInfo | grep "mAh" | grep Capacity | awk '{ print $5 }')
 chgPct=$()
 
 if [[ $majorOSVers -eq 11 ]]; then
+	hasBattery=$(cat $batteryInfo | grep "Device Name" > /dev/null && echo "Yes" )
 	chgPct=$(cat $batteryInfo | grep "%" | awk -F": " '{print $2}')
 else
+	hasBattery=$(cat $batteryInfo | grep "Battery Installed" | awk '{ print $3 '} )
 	chgRem=$(cat $batteryInfo | grep "mAh" | grep Remain | awk '{ print $4 }')
 	chgPct=$(echo "( ( $chgRem / $chgFull ) * 100 )" | bc -l )
 
